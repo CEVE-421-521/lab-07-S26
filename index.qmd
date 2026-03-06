@@ -33,6 +33,7 @@ code-overflow: wrap
 code-line-numbers: false
 code-block-font-size: "0.85em"
 code-annotations: below
+bibliography: references.bib
 ---
 
 ## Overview
@@ -309,14 +310,34 @@ $$
 Higher is better — we want a decision that "works" in as many futures as possible.
 
 The function below has the same structure as `expected_costs` above, but instead of `mean(costs)` you need to compute the **fraction of costs below the threshold**.
-# Your code here
+
 ```{julia}
 τ = 150_000  # cost threshold (USD)
+```
 
+The function below computes satisficing, but it has a **bug**: it always returns `0.0` instead of the actual fraction.
+**Your task:** fix the line marked `FIX ME` so that `frac` equals the fraction of costs below `τ`.
+The function runs as-is (so the notebook renders), but the satisficing plot will be flat at zero until you fix it.
+
+```{julia}
 function satisficing(df, τ)
     combine(groupby(df, :elevation_ft)) do gdf
         costs = gdf.total_cost
-# Your code here
+        frac = 0.0  # FIX ME: compute the fraction of costs below τ
+        (fraction_satisfactory=frac,)
+    end
+end
+```
+
+::: {.callout-note collapse="true" title="Hint"}
+`costs .< τ` gives a vector of `true`/`false`.
+Taking the `mean` of a Boolean vector gives the fraction that are `true`.
+So: `frac = mean(costs .< τ)`.
+:::
+
+
+```{julia}
+sat_results = satisficing(perf, τ)
 ```
 
 ::: {.callout-note collapse="true" title="Hint"}
@@ -557,22 +578,38 @@ $$
 \bar{C}_w(h) = \sum_{j=1}^{N} w_j \cdot C(h, s_j)
 $$
 
-The two functions below have the same structure as the unweighted metrics.
+The two functions below have the same structure as the unweighted metrics, but they have **bugs**: they ignore the weights and just compute the unweighted versions.
+**Your task:** fix the lines marked `FIX ME` so that:
+
+- `weighted_expected_cost` computes a **weighted sum** of costs instead of a simple mean
+- `weighted_satisficing` computes a **weighted fraction** below the threshold instead of an unweighted fraction
+
 The variable `w` contains the weights for this group's trajectories (already extracted for you) and `costs` contains the total costs.
-# Your code here
+Both functions run as-is, but the weighted plot will look identical to the unweighted plot until you fix them.
+
 ```{julia}
 function weighted_expected_cost(df, weights)
     combine(groupby(df, :elevation_ft)) do gdf
-        w = weights[gdf.trajectory]  # weights for this group's trajectories
+        w = weights[gdf.trajectory]
         costs = gdf.total_cost
-# Your code here
-# Your code here
+        (expected_cost=mean(costs),)  # FIX ME: use weights instead of simple mean
+    end
+end
+
+function weighted_satisficing(df, weights, τ)
+    combine(groupby(df, :elevation_ft)) do gdf
+        w = weights[gdf.trajectory]
+        costs = gdf.total_cost
+        (fraction_satisfactory=mean(costs .< τ),)  # FIX ME: use weights instead of simple mean
+    end
+end
 ```
 
 ::: {.callout-note collapse="true" title="Hint"}
-Compare to the unweighted versions: `mean(costs)` becomes `sum(costs .* w)`, and `mean(costs .< τ)` becomes `sum(w .* (costs .< τ))`.
-The weights `w` replace the implicit $1/N$ from `mean`.
+The unweighted `mean(costs)` treats every trajectory as equally likely ($1/N$ each).
+With weights, replace `mean(costs)` with `sum(costs .* w)`, and `mean(costs .< τ)` with `sum(w .* (costs .< τ))`.
 :::
+
 
 ```{julia}
 #| label: fig-weighted
